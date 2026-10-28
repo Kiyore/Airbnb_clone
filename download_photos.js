@@ -1,0 +1,128 @@
+import fs from 'fs';
+import path from 'path';
+import https from 'https';
+
+const outDir = path.resolve('public', 'photos');
+if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+
+const photos = [
+  {
+    filename: 'hero-living-room.jpg',
+    url: 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&w=1600&q=80',
+    title: 'Spacious living room with comfy couch and indoor plant',
+    category: 'Living room'
+  },
+  {
+    filename: 'bedroom-main.jpg',
+    url: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=80',
+    title: 'Cozy bedroom with king bed and warm ambient lighting',
+    category: 'Bedroom'
+  },
+  {
+    filename: 'jacuzzi-luxury.jpg',
+    url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80',
+    title: 'Private indoor jacuzzi with hydrotherapy jets',
+    category: 'Jacuzzi'
+  },
+  {
+    filename: 'dining-living.jpg',
+    url: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1200&q=80',
+    title: 'Living and dining space with natural light',
+    category: 'Living room'
+  },
+  {
+    filename: 'swimming-pool.jpg',
+    url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=1200&q=80',
+    title: 'Outdoor shared swimming pool surrounded by greenery',
+    category: 'Outdoor / Pool'
+  },
+  {
+    filename: 'kitchen-modern.jpg',
+    url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80',
+    title: 'Fully equipped modern kitchen with appliances',
+    category: 'Kitchen'
+  },
+  {
+    filename: 'bathroom-shower.jpg',
+    url: 'https://images.unsplash.com/photo-1620626011761-996317b8d101?auto=format&fit=crop&w=1200&q=80',
+    title: 'Sleek bathroom with walk-in rain shower & LED mirror',
+    category: 'Full bathroom'
+  },
+  {
+    filename: 'bedroom-detail.jpg',
+    url: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=1200&q=80',
+    title: 'Bedroom side view with plush linens and wardrobe',
+    category: 'Bedroom'
+  },
+  {
+    filename: 'balcony-view.jpg',
+    url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80',
+    title: 'Private sit-out balcony with tropical views',
+    category: 'Outdoor / Balcony'
+  },
+  {
+    filename: 'building-exterior.jpg',
+    url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80',
+    title: 'Botanica complex architecture and landscaped gardens',
+    category: 'Exterior'
+  },
+  {
+    filename: 'jacuzzi-relax.jpg',
+    url: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
+    title: 'Spa mood Jacuzzi experience with ambient candles',
+    category: 'Jacuzzi'
+  },
+  {
+    filename: 'living-tv-unit.jpg',
+    url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+    title: 'Living room entertainment center with Smart TV & Wi-Fi',
+    category: 'Living room'
+  },
+  {
+    filename: 'host-avatar.jpg',
+    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+    title: 'Mirashya Homes Host Profile',
+    category: 'Host'
+  }
+];
+
+function downloadFile(url, dest) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return downloadFile(res.headers.location, dest).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        return reject(new Error(`Failed with status ${res.statusCode}`));
+      }
+      const file = fs.createWriteStream(dest);
+      res.pipe(file);
+      file.on('finish', () => {
+        file.close();
+        resolve();
+      });
+      file.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
+async function main() {
+  console.log(`Downloading ${photos.length} photos...`);
+  for (const item of photos) {
+    const dest = path.join(outDir, item.filename);
+    try {
+      console.log(`Downloading ${item.filename}...`);
+      await downloadFile(item.url, dest);
+      const stat = fs.statSync(dest);
+      console.log(`  ✓ Saved ${item.filename} (${Math.round(stat.size / 1024)} KB)`);
+    } catch (e) {
+      console.error(`  ✗ Error downloading ${item.filename}:`, e.message);
+    }
+  }
+  
+  // Write metadata json for photos
+  fs.writeFileSync(path.resolve('src', 'data', 'photos.json'), JSON.stringify(photos, null, 2), 'utf8');
+  console.log('Finished downloading all photos!');
+}
+
+main();
